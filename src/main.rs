@@ -1,25 +1,15 @@
 use glob::glob;
-use pulldown_cmark::{html, Event, Options, Parser, Tag};
+use pulldown_cmark::{Event, Parser, Tag};
 use std::fs;
 
 fn extract_links(md: &str) -> Vec<String> {
-    let options = Options::empty();
     let mut links: Vec<String> = Vec::new();
-    let parser = Parser::new_ext(md, options).map(|event| match event {
-        Event::Start(Tag::Link(x, link, z)) => {
-            links.push(link.clone().into_string());
-            Event::Start(Tag::Link(x, link, z))
-        }
-        Event::Start(Tag::Image(x, link, z)) => {
-            links.push(link.clone().into_string());
-            Event::Start(Tag::Image(x, link, z))
-        }
-        _ => event,
+    Parser::new(md).for_each(|event| match event {
+        Event::Start(Tag::Link(_, link, _)) => links.push(link.into_string()),
+        Event::Start(Tag::Image(_, link, _)) => links.push(link.into_string()),
+        _ => (),
     });
 
-    let mut html_output = String::new();
-    /* FIXME: do not render html, just parse md */
-    html::push_html(&mut html_output, parser);
     links
 }
 
