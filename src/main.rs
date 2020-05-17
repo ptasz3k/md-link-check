@@ -1,4 +1,6 @@
+use glob::glob;
 use pulldown_cmark::{html, Event, Options, Parser, Tag};
+use std::fs;
 
 fn extract_links(md: &str) -> Vec<String> {
     let options = Options::empty();
@@ -22,8 +24,16 @@ fn extract_links(md: &str) -> Vec<String> {
 }
 
 fn main() {
-    /* FIXME: find recursively all md, read, extract links, check links, print output */
-    let markdown_input = "Hello, world!, this is a [link](../dupa.md), ![obrazek](images/img1.png)";
-    let links = extract_links(markdown_input);
-    println!("{:?}", links);
+    for entry in glob("/home/radekk/kide.doc/src//**/*.md").expect("Failed to read glob pattern") {
+        match entry {
+            Ok(path) => {
+                println!("{:?}", path.display());
+                let md = fs::read_to_string(path).expect("Cannot read file");
+                let links = extract_links(&md);
+                println!("{:?}", links);
+                /* FIXME: check links, print output */
+            }
+            Err(e) => println!("{:?}", e),
+        }
+    }
 }
