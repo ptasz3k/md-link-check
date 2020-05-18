@@ -78,7 +78,7 @@ fn main() {
                         true
                     };
 
-                    if result {
+                    if !result {
                         errors += 1;
                     }
 
