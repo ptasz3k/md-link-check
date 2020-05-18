@@ -39,6 +39,8 @@ fn main() {
     let style_err = Style::new().red();
     let style_success = Style::new().green();
 
+    let mut errors = 0;
+
     for entry in
         glob(&format!("{}{}", starting_directory, "/**/*.md")).expect("Failed to read glob pattern")
     {
@@ -72,6 +74,10 @@ fn main() {
                         }
                     };
 
+                    if result {
+                        errors = errors + 1;
+                    }
+
                     if print_success || !result {
                         let mark = if result {
                             style_success.apply_to("✓")
@@ -89,4 +95,9 @@ fn main() {
 
         println!();
     }
+
+    std::process::exit(match errors {
+        0 => 0,
+        _ => 1
+    });
 }
