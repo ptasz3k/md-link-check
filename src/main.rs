@@ -1,8 +1,8 @@
+use console::Style;
 use glob::glob;
 use pulldown_cmark::{Event, Parser, Tag};
 use std::fs;
 use std::path::{Path, PathBuf};
-use console::Style;
 
 const URL_SCHEMAS: &[&str] = &["https://", "http://"];
 
@@ -37,12 +37,17 @@ fn main() {
                 let links = extract_links(&md);
                 let parent = path.parent();
                 links.iter().for_each(|l| {
-                    let is_url = URL_SCHEMAS.into_iter().any(|schema| l.starts_with(schema));
+                    let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
 
                     let result = if !is_url {
-                        let to_check = match parent {
-                            Some(p) => p.join(Path::new(l)),
-                            None => PathBuf::from(l),
+                        let link_path = Path::new(l);
+                        let to_check = if link_path.is_absolute() {
+                            PathBuf::from(l)
+                        } else {
+                            match parent {
+                                Some(p) => p.join(link_path),
+                                None => PathBuf::from(l),
+                            }
                         };
                         to_check.exists()
                     } else {
@@ -54,7 +59,11 @@ fn main() {
                     };
 
                     if print_success || !result {
-                        let mark = if result { style_success.apply_to("✓") } else { style_err.apply_to("✗") };
+                        let mark = if result {
+                            style_success.apply_to("✓")
+                        } else {
+                            style_err.apply_to("✗")
+                        };
                         println!("  [{}] {}", mark, l);
                     }
                 });
