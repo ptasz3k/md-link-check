@@ -10,4 +10,5 @@ edition = "2018"
 glob = "0.3.0"
 pulldown-cmark = { version = "0.7", default-features = false, features = ["simd"] }
 reqwest = { version = "0.10", features = ["blocking"] }
+console = "0.11"
 
