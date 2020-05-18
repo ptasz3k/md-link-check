@@ -1,3 +1,4 @@
+use clap::{App, Arg};
 use console::Style;
 use glob::glob;
 use pulldown_cmark::{Event, Parser, Tag};
@@ -18,15 +19,29 @@ fn extract_links(md: &str) -> Vec<String> {
 }
 
 fn main() {
-    let print_success = false;
-    let starting_directory = "../../kide.doc/src/**/*.md";
+    let matches = App::new("md-link-check")
+        .version("0.1")
+        .author("Radek Krahl <radek@krahl.pl>")
+        .about("Check for broken links in markdown documents")
+        .arg("-s, --print-successes 'Prints links that are ok also'")
+        .arg(
+            Arg::new("starting-dir")
+                .about("Start checking in that directory")
+                .default_value(".")
+        )
+        .get_matches();
+
+    let print_success = matches.is_present("print-successes");
+    let starting_directory = matches.value_of("starting-dir").unwrap();
 
     let client = reqwest::blocking::Client::new();
     let style_info = Style::new().cyan();
     let style_err = Style::new().red();
     let style_success = Style::new().green();
 
-    for entry in glob(starting_directory).expect("Failed to read glob pattern") {
+    for entry in
+        glob(&format!("{}{}", starting_directory, "/**/*.md")).expect("Failed to read glob pattern")
+    {
         match entry {
             Ok(path) => {
                 let md = fs::read_to_string(&path).expect("Cannot read file");
