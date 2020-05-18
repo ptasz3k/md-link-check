@@ -18,7 +18,7 @@ fn extract_links(md: &str) -> Vec<String> {
 }
 
 fn main() {
-    let print_success = true;
+    let print_success = false;
     let starting_directory = "../../kide.doc/src/**/*.md";
 
     let client = reqwest::blocking::Client::new();
@@ -32,7 +32,6 @@ fn main() {
                 let md = fs::read_to_string(&path).expect("Cannot read file");
 
                 println!("FILE: {}", style_info.apply_to(path.display()));
-                println!();
 
                 let links = extract_links(&md);
                 let parent = path.parent();
@@ -68,7 +67,6 @@ fn main() {
                     }
                 });
 
-                println!();
                 println!("{} links checked.", links.len());
             }
             Err(e) => println!("{:?}", e),
