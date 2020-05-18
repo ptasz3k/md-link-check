@@ -75,7 +75,7 @@ fn main() {
                     };
 
                     if result {
-                        errors = errors + 1;
+                        errors += 1;
                     }
 
                     if print_success || !result {
