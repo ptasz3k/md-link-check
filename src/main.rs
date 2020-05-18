@@ -24,14 +24,16 @@ fn main() {
         .author("Radek Krahl <radek@krahl.pl>")
         .about("Check for broken links in markdown documents")
         .arg("-s, --print-successes 'Prints links that are ok also'")
+        .arg("-l, --local-only 'Check only local files'")
         .arg(
             Arg::new("starting-dir")
                 .about("Start checking in that directory")
-                .default_value(".")
+                .default_value("."),
         )
         .get_matches();
 
     let print_success = matches.is_present("print-successes");
+    let local_only = matches.is_present("local-only");
     let starting_directory = matches.value_of("starting-dir").unwrap();
 
     let client = reqwest::blocking::Client::new();
@@ -66,12 +68,14 @@ fn main() {
                             }
                         };
                         to_check.exists()
-                    } else {
+                    } else if !local_only {
                         let res = client.head(l).send();
                         match res {
                             Err(_) => false,
                             _ => true,
                         }
+                    } else {
+                        true
                     };
 
                     if result {
@@ -98,6 +102,6 @@ fn main() {
 
     std::process::exit(match errors {
         0 => 0,
-        _ => 1
+        _ => 1,
     });
 }
