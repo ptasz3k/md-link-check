@@ -2,6 +2,7 @@ use clap::{App, Arg};
 use console::Style;
 use glob::glob;
 use pulldown_cmark::{Event, Parser, Tag};
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -71,6 +72,7 @@ fn main() {
 
     let mut errors = 0;
     let client = reqwest::blocking::Client::new();
+    let mut mem = HashMap::<String, bool>::new();
 
     for entry in glob(&format!("{}{}", opts.starting_directory, "/**/*.md"))
         .expect("Failed to read glob pattern")
@@ -86,22 +88,33 @@ fn main() {
                 let mut checked = 0;
                 links.iter().for_each(|l| {
                     let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
-                    let result = if !is_url {
-                        checked += 1;
-                        check_local(parent, l)
-                    } else if !opts.local_only {
-                        checked += 1;
-                        check_remote(&client, l)
-                    } else {
-                        true
+                    let correct = match mem.get(l) {
+                        Some(r) => {
+                            checked += 1;
+                            r.clone()
+                        }
+                        None => {
+                            let r = if !is_url {
+                                checked += 1;
+                                check_local(parent, l)
+                            } else if !opts.local_only {
+                                checked += 1;
+                                check_remote(&client, l)
+                            } else {
+                                true
+                            };
+
+                            mem.insert(l.clone(), r);
+                            r
+                        }
                     };
 
-                    if !result {
+                    if !correct {
                         errors += 1;
                     }
 
-                    if opts.print_success || !result {
-                        let mark = if result {
+                    if opts.print_success || !correct {
+                        let mark = if correct {
                             style_success.apply_to("✓")
                         } else {
                             style_err.apply_to("✗")
