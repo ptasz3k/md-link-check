@@ -15,6 +15,7 @@ md-link-check [--local-only] [--print-successes] [<directory>]
 
 \<directory\>: directory in which recursive search should start, program will check all files with `.md` extension. Set to `.` (current dir) by default.
 
+Exit status: 1 if at least one broken link was found, 0 if none.
 
 TODO:
 
