@@ -45,15 +45,32 @@ fn parse_options() -> Options {
     }
 }
 
+fn check_local(parent: Option<&Path>, l: &str) -> bool {
+    let link_path = Path::new(l);
+    let to_check = match parent {
+        Some(p) if !link_path.is_absolute() => p.join(link_path),
+        _ => PathBuf::from(l),
+    };
+    to_check.exists()
+}
+
+fn check_remote(client: &reqwest::blocking::Client, url: &str) -> bool {
+    let res = client.head(url).send();
+    match res {
+        Err(_) => false,
+        _ => true,
+    }
+}
+
 fn main() {
     let opts = parse_options();
 
-    let client = reqwest::blocking::Client::new();
     let style_info = Style::new().cyan();
     let style_err = Style::new().red();
     let style_success = Style::new().green();
 
     let mut errors = 0;
+    let client = reqwest::blocking::Client::new();
 
     for entry in glob(&format!("{}{}", opts.starting_directory, "/**/*.md"))
         .expect("Failed to read glob pattern")
@@ -70,20 +87,11 @@ fn main() {
                 links.iter().for_each(|l| {
                     let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
                     let result = if !is_url {
-                        let link_path = Path::new(l);
-                        let to_check = match parent {
-                            Some(p) if !link_path.is_absolute() => p.join(link_path),
-                            _ => PathBuf::from(l),
-                        };
                         checked += 1;
-                        to_check.exists()
+                        check_local(parent, l)
                     } else if !opts.local_only {
-                        let res = client.head(l).send();
                         checked += 1;
-                        match res {
-                            Err(_) => false,
-                            _ => true,
-                        }
+                        check_remote(&client, l)
                     } else {
                         true
                     };
