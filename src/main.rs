@@ -91,7 +91,7 @@ fn main() {
                     let correct = match mem.get(l) {
                         Some(r) => {
                             checked += 1;
-                            r.clone()
+                            *r
                         }
                         None => {
                             let r = if !is_url {
