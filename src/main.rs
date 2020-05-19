@@ -69,16 +69,11 @@ fn main() {
                 let mut checked = 0;
                 links.iter().for_each(|l| {
                     let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
-
                     let result = if !is_url {
                         let link_path = Path::new(l);
-                        let to_check = if link_path.is_absolute() {
-                            PathBuf::from(l)
-                        } else {
-                            match parent {
-                                Some(p) => p.join(link_path),
-                                None => PathBuf::from(l),
-                            }
+                        let to_check = match parent {
+                            Some(p) if !link_path.is_absolute() => p.join(link_path),
+                            _ => PathBuf::from(l),
                         };
                         checked += 1;
                         to_check.exists()
