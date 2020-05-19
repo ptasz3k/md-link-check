@@ -87,13 +87,13 @@ fn main() {
                 let parent = path.parent();
                 let mut checked = 0;
                 links.iter().for_each(|l| {
-                    let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
                     let correct = match mem.get(l) {
                         Some(r) => {
                             checked += 1;
                             *r
                         }
                         None => {
+                            let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
                             let r = if !is_url {
                                 checked += 1;
                                 check_local(parent, l)
