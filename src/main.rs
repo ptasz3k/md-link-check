@@ -7,6 +7,12 @@ use std::path::{Path, PathBuf};
 
 const URL_SCHEMAS: &[&str] = &["https://", "http://"];
 
+struct Options {
+    print_success: bool,
+    local_only: bool,
+    starting_directory: String,
+}
+
 fn extract_links(md: &str) -> Vec<String> {
     let mut links: Vec<String> = Vec::new();
     Parser::new(md).for_each(|event| match event {
@@ -18,7 +24,7 @@ fn extract_links(md: &str) -> Vec<String> {
     links
 }
 
-fn main() {
+fn parse_options() -> Options {
     let matches = App::new("md-link-check")
         .version("0.1")
         .author("Radek Krahl <radek@krahl.pl>")
@@ -32,9 +38,15 @@ fn main() {
         )
         .get_matches();
 
-    let print_success = matches.is_present("print-successes");
-    let local_only = matches.is_present("local-only");
-    let starting_directory = matches.value_of("starting-dir").unwrap();
+    Options {
+        print_success: matches.is_present("print-successes"),
+        local_only: matches.is_present("local-only"),
+        starting_directory: String::from(matches.value_of("starting-dir").unwrap()),
+    }
+}
+
+fn main() {
+    let opts = parse_options();
 
     let client = reqwest::blocking::Client::new();
     let style_info = Style::new().cyan();
@@ -43,8 +55,8 @@ fn main() {
 
     let mut errors = 0;
 
-    for entry in
-        glob(&format!("{}{}", starting_directory, "/**/*.md")).expect("Failed to read glob pattern")
+    for entry in glob(&format!("{}{}", opts.starting_directory, "/**/*.md"))
+        .expect("Failed to read glob pattern")
     {
         match entry {
             Ok(path) => {
@@ -70,7 +82,7 @@ fn main() {
                         };
                         checked += 1;
                         to_check.exists()
-                    } else if !local_only {
+                    } else if !opts.local_only {
                         let res = client.head(l).send();
                         checked += 1;
                         match res {
@@ -85,7 +97,7 @@ fn main() {
                         errors += 1;
                     }
 
-                    if print_success || !result {
+                    if opts.print_success || !result {
                         let mark = if result {
                             style_success.apply_to("✓")
                         } else {
