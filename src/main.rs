@@ -54,6 +54,7 @@ fn main() {
 
                 let links = extract_links(&md);
                 let parent = path.parent();
+                let mut checked = 0;
                 links.iter().for_each(|l| {
                     let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
 
@@ -67,9 +68,11 @@ fn main() {
                                 None => PathBuf::from(l),
                             }
                         };
+                        checked += 1;
                         to_check.exists()
                     } else if !local_only {
                         let res = client.head(l).send();
+                        checked += 1;
                         match res {
                             Err(_) => false,
                             _ => true,
@@ -92,7 +95,7 @@ fn main() {
                     }
                 });
 
-                println!("{} links checked.", links.len());
+                println!("{}/{} links checked.", checked, links.len());
             }
             Err(e) => println!("{:?}", e),
         }
