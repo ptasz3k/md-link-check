@@ -26,14 +26,7 @@ FROM ubuntu:focal
 RUN apt-get update
 RUN apt-get install openssl -y
 
-RUN adduser --disabled-password --shell /bin/sh -u 1000 md-link-check 
-
-WORKDIR /home/md-link-check/bin/
+WORKDIR /usr/bin/
 
 COPY --from=cargo-build /usr/src/md-link-check/target/release/md-link-check .
 
-RUN chown md-link-check:md-link-check md-link-check
-
-USER md-link-check
-
-CMD ["./md-link-check"]
