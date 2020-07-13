@@ -11,6 +11,7 @@ const URL_SCHEMAS: &[&str] = &["https://", "http://"];
 struct Options {
     print_success: bool,
     local_only: bool,
+    ascii_only: bool,
     starting_directory: String,
 }
 
@@ -32,6 +33,7 @@ fn parse_options() -> Options {
         .about("Check for broken links in markdown documents")
         .arg("-s, --print-successes 'Prints links that are ok also'")
         .arg("-l, --local-only 'Check only local files'")
+        .arg("-a, --ascii-only 'Allow only ASCII chars in link paths'")
         .arg(
             Arg::new("starting-dir")
                 .about("Start checking in that directory")
@@ -42,6 +44,7 @@ fn parse_options() -> Options {
     Options {
         print_success: matches.is_present("print-successes"),
         local_only: matches.is_present("local-only"),
+        ascii_only: matches.is_present("ascii-only"),
         starting_directory: String::from(matches.value_of("starting-dir").unwrap()),
     }
 }
@@ -93,8 +96,13 @@ fn main() {
                             *r
                         }
                         None => {
+                            let is_ascii = if opts.ascii_only {
+                                l.chars().all(|c| { c.is_ascii() })
+                            } else {
+                                true
+                            };
                             let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
-                            let r = if !is_url {
+                            let r = is_ascii && if !is_url {
                                 checked += 1;
                                 check_local(parent, l)
                             } else if !opts.local_only {
