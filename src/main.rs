@@ -1,23 +1,17 @@
-use clap::{App, Arg};
+use clap::command;
+use clap::Parser;
 use console::Style;
 use glob::glob;
-use pulldown_cmark::{Event, Parser, Tag};
+use pulldown_cmark::{Event, Tag};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 const URL_SCHEMAS: &[&str] = &["https://", "http://"];
 
-struct Options {
-    print_success: bool,
-    local_only: bool,
-    ascii_only: bool,
-    starting_directory: String,
-}
-
 fn extract_links(md: &str) -> Vec<String> {
     let mut links: Vec<String> = Vec::new();
-    Parser::new(md).for_each(|event| match event {
+    pulldown_cmark::Parser::new(md).for_each(|event| match event {
         Event::Start(Tag::Link(_, link, _)) => links.push(link.into_string()),
         Event::Start(Tag::Image(_, link, _)) => links.push(link.into_string()),
         _ => (),
@@ -26,27 +20,25 @@ fn extract_links(md: &str) -> Vec<String> {
     links
 }
 
-fn parse_options() -> Options {
-    let matches = App::new("md-link-check")
-        .version("0.1")
-        .author("Radek Krahl <radek@krahl.pl>")
-        .about("Check for broken links in markdown documents")
-        .arg("-s, --print-successes 'Prints links that are ok also'")
-        .arg("-l, --local-only 'Check only local files'")
-        .arg("-a, --ascii-only 'Allow only ASCII chars in link paths'")
-        .arg(
-            Arg::new("starting-dir")
-                .about("Start checking in that directory")
-                .default_value("."),
-        )
-        .get_matches();
+#[derive(clap::Parser, Debug)]
+#[command(author, version, about, long_about=None)]
+struct Cli {
+    #[arg(long, short)]
+    /// Print successful links
+    print_successes: bool,
+    #[arg(long, short)]
+    /// Check only local links
+    local_only: bool,
+    #[arg(long, short)]
+    /// Allow only ASCII characters in link paths
+    ascii_only: bool,
+    #[arg(default_value = ".")]
+    /// Starting directory for recursive search
+    starting_directory: String,
+}
 
-    Options {
-        print_success: matches.is_present("print-successes"),
-        local_only: matches.is_present("local-only"),
-        ascii_only: matches.is_present("ascii-only"),
-        starting_directory: String::from(matches.value_of("starting-dir").unwrap()),
-    }
+fn parse_options() -> Cli {
+    Cli::parse()
 }
 
 fn check_local(parent: Option<&Path>, l: &str) -> bool {
@@ -58,8 +50,8 @@ fn check_local(parent: Option<&Path>, l: &str) -> bool {
     to_check.exists()
 }
 
-fn check_remote(client: &reqwest::blocking::Client, url: &str) -> bool {
-    let res = client.head(url).send();
+fn check_remote(url: &str) -> bool {
+    let res = ureq::head(url).call();
     match res {
         Err(_) => false,
         _ => true,
@@ -74,7 +66,6 @@ fn main() {
     let style_success = Style::new().green();
 
     let mut errors = 0;
-    let client = reqwest::blocking::Client::new();
     let mut mem = HashMap::<String, bool>::new();
 
     for entry in glob(&format!("{}{}", opts.starting_directory, "/**/*.md"))
@@ -97,20 +88,21 @@ fn main() {
                         }
                         None => {
                             let is_ascii = if opts.ascii_only {
-                                l.chars().all(|c| { c.is_ascii() })
+                                l.chars().all(|c| c.is_ascii())
                             } else {
                                 true
                             };
                             let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
-                            let r = is_ascii && if !is_url {
-                                checked += 1;
-                                check_local(parent, l)
-                            } else if !opts.local_only {
-                                checked += 1;
-                                check_remote(&client, l)
-                            } else {
-                                true
-                            };
+                            let r = is_ascii
+                                && if !is_url {
+                                    checked += 1;
+                                    check_local(parent, l)
+                                } else if !opts.local_only {
+                                    checked += 1;
+                                    check_remote(l)
+                                } else {
+                                    true
+                                };
 
                             mem.insert(l.clone(), r);
                             r
@@ -121,7 +113,7 @@ fn main() {
                         errors += 1;
                     }
 
-                    if opts.print_success || !correct {
+                    if opts.print_successes || !correct {
                         let mark = if correct {
                             style_success.apply_to("✓")
                         } else {
