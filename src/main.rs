@@ -12,8 +12,18 @@ const URL_SCHEMAS: &[&str] = &["https://", "http://"];
 fn extract_links(md: &str) -> Vec<String> {
     let mut links: Vec<String> = Vec::new();
     pulldown_cmark::Parser::new(md).for_each(|event| match event {
-        Event::Start(Tag::Link(_, link, _)) => links.push(link.into_string()),
-        Event::Start(Tag::Image(_, link, _)) => links.push(link.into_string()),
+        Event::Start(Tag::Link {
+            link_type: _,
+            dest_url,
+            title: _,
+            id: _,
+        }) => links.push(dest_url.into_string()),
+        Event::Start(Tag::Image {
+            link_type: _,
+            dest_url,
+            title: _,
+            id: _,
+        }) => links.push(dest_url.into_string()),
         _ => (),
     });
 
@@ -52,10 +62,7 @@ fn check_local(parent: Option<&Path>, l: &str) -> bool {
 
 fn check_remote(url: &str) -> bool {
     let res = ureq::head(url).call();
-    match res {
-        Err(_) => false,
-        _ => true,
-    }
+    res.is_err()
 }
 
 fn main() {
@@ -68,9 +75,7 @@ fn main() {
     let mut errors = 0;
     let mut mem = HashMap::<String, bool>::new();
 
-    for entry in glob(&format!("{}{}", opts.starting_directory, "/**/*.md"))
-        .expect("Failed to read glob pattern")
-    {
+    for entry in glob(&format!("{}{}", opts.starting_directory, "/**/*.md")).unwrap() {
         match entry {
             Ok(path) => {
                 let md = fs::read_to_string(&path).expect("Cannot read file");
@@ -87,11 +92,7 @@ fn main() {
                             *r
                         }
                         None => {
-                            let is_ascii = if opts.ascii_only {
-                                l.chars().all(|c| c.is_ascii())
-                            } else {
-                                true
-                            };
+                            let is_ascii = if opts.ascii_only { l.is_ascii() } else { true };
                             let is_url = URL_SCHEMAS.iter().any(|schema| l.starts_with(schema));
                             let r = is_ascii
                                 && if !is_url {
