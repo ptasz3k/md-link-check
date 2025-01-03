@@ -21,7 +21,7 @@ RUN rm -f target/release/deps/md-link-check*
 # Final Stage
 # ------------------------------------------------------------------------------
 
-FROM ubuntu:focal
+FROM ubuntu:noble
 
 RUN apt-get update
 RUN apt-get install openssl -y
